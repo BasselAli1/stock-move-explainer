@@ -1,0 +1,12 @@
+# Companies watched by the ingestion and trigger jobs.
+#
+# Only the ticker is required — company name and CIK are resolved
+# automatically at runtime from SEC's company_tickers.json, not hardcoded
+# here. Add or remove tickers as needed; no code changes required.
+
+companies:
+  - ticker: AAPL
+  - ticker: MSFT
+  - ticker: TSLA
+  - ticker: NVDA
+  - ticker: AMZN

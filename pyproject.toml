@@ -1,0 +1,39 @@
+# Stock Move Explainer
+#
+# Watches a small list of public companies, and when a stock's price jumps
+# more than a set threshold in a day, searches that company's SEC filings for
+# related "Risk Factors" language and emails a plain-language explanation
+# grounded only in real filing text.
+
+[project]
+name = "stock-move-explainer"
+version = "0.1.0"
+description = "Explains large daily stock price moves using grounded excerpts from SEC filings."
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg[binary]>=3.1",
+    "pgvector>=0.2.5",
+    "openai>=1.40",
+    "resend>=2.0",
+    "apscheduler>=3.10",
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "tiktoken>=0.7",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
