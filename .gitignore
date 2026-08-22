@@ -9,6 +9,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Local cache (e.g. SEC ticker-to-CIK mapping)
+.cache/
+
 # Packaging artifacts
 *.egg-info/
 build/
