@@ -35,14 +35,16 @@ def ingest_company(
     ticker: str,
     sec_user_agent: str,
     embedding_model: str,
+    max_new_filings: int | None = None,
 ) -> None:
-    """Ingest all new filings for one watched company.
+    """Ingest new filings for one watched company.
 
     Resolves the company's CIK, lists its recent 10-K/10-Q filings, skips
-    any already ingested, and for each new one: fetches the document,
-    extracts the Risk Factors section, chunks it, embeds each chunk, and
-    stores everything. A filing with no extractable Risk Factors section is
-    logged and skipped, not treated as an error — see risk_factors.py.
+    any already ingested, and for each new one (up to `max_new_filings`):
+    fetches the document, extracts the Risk Factors section, chunks it,
+    embeds each chunk, and stores everything. A filing with no extractable
+    Risk Factors section is logged and skipped, not treated as an error —
+    see risk_factors.py.
 
     Args:
         conn: Open database connection.
@@ -50,6 +52,13 @@ def ingest_company(
         ticker: Ticker symbol to ingest.
         sec_user_agent: Identifying User-Agent required by SEC EDGAR.
         embedding_model: OpenAI embedding model name.
+        max_new_filings: Cap on how many new filings to process this call.
+            None (the default, used by normal daily runs) means no cap —
+            SEC's "recent filings" window is already a bounded, ongoing
+            trickle, so daily runs never need a limit. A finite value is
+            for a first-time backfill on a fresh database, where every
+            filing in that window counts as "new" at once and could mean
+            processing years of history in one run.
     """
     company_info = resolve_cik(ticker, sec_user_agent)
     company_id = db.get_or_create_company(
@@ -63,6 +72,8 @@ def ingest_company(
     new_filings = [
         filing for filing in filings if not db.filing_exists(conn, filing.accession_number)
     ]
+    if max_new_filings is not None:
+        new_filings = new_filings[:max_new_filings]
     logger.info("%s: %d filings found, %d new", ticker, len(filings), len(new_filings))
 
     for filing in new_filings:
