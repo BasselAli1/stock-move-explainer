@@ -206,11 +206,11 @@ def search_similar_chunks(
                 f.form_type,
                 f.filing_date,
                 f.primary_doc_url,
-                fc.embedding <=> %(query_embedding)s AS distance
+                fc.embedding <=> %(query_embedding)s::vector AS distance
             FROM filing_chunks fc
             JOIN filings f ON f.id = fc.filing_id
             WHERE fc.company_id = %(company_id)s
-            ORDER BY fc.embedding <=> %(query_embedding)s
+            ORDER BY fc.embedding <=> %(query_embedding)s::vector
             LIMIT %(limit)s
             """,
             {
