@@ -28,6 +28,15 @@ logger = logging.getLogger(__name__)
 
 RISK_FACTORS_SECTION = "risk_factors"
 
+# A filing whose extracted Risk Factors section produces at least this many
+# chunks is considered "substantive" rather than a short referral (e.g. a
+# 10-Q that just points back to the last 10-K with no material changes —
+# real, legitimate content, but nothing to actually search against). Used
+# only to decide when max_new_filings has been satisfied: referral filings
+# are still ingested and stored normally, they just don't count toward the
+# cap, so a capped run doesn't stop having found nothing substantive.
+_SUBSTANTIVE_CHUNK_THRESHOLD = 5
+
 
 def ingest_company(
     conn: psycopg.Connection,
@@ -40,11 +49,10 @@ def ingest_company(
     """Ingest new filings for one watched company.
 
     Resolves the company's CIK, lists its recent 10-K/10-Q filings, skips
-    any already ingested, and for each new one (up to `max_new_filings`):
-    fetches the document, extracts the Risk Factors section, chunks it,
-    embeds each chunk, and stores everything. A filing with no extractable
-    Risk Factors section is logged and skipped, not treated as an error —
-    see risk_factors.py.
+    any already ingested, and for each new one: fetches the document,
+    extracts the Risk Factors section, chunks it, embeds each chunk, and
+    stores everything. A filing with no extractable Risk Factors section is
+    logged and skipped, not treated as an error — see risk_factors.py.
 
     Args:
         conn: Open database connection.
@@ -52,13 +60,16 @@ def ingest_company(
         ticker: Ticker symbol to ingest.
         sec_user_agent: Identifying User-Agent required by SEC EDGAR.
         embedding_model: OpenAI embedding model name.
-        max_new_filings: Cap on how many new filings to process this call.
-            None (the default, used by normal daily runs) means no cap —
-            SEC's "recent filings" window is already a bounded, ongoing
-            trickle, so daily runs never need a limit. A finite value is
-            for a first-time backfill on a fresh database, where every
-            filing in that window counts as "new" at once and could mean
-            processing years of history in one run.
+        max_new_filings: Cap on how many *substantive* new filings to
+            process this call (see `_SUBSTANTIVE_CHUNK_THRESHOLD`) — a
+            short referral filing is still ingested but doesn't count
+            toward this cap, so a capped run doesn't stop having found
+            nothing useful. None (the default, used by normal daily runs)
+            means no cap — SEC's "recent filings" window is already a
+            bounded, ongoing trickle, so daily runs never need a limit. A
+            finite value is for a first-time backfill on a fresh database,
+            where every filing in that window counts as "new" at once and
+            could otherwise mean processing years of history in one run.
     """
     company_info = resolve_cik(ticker, sec_user_agent)
     company_id = db.get_or_create_company(
@@ -72,11 +83,13 @@ def ingest_company(
     new_filings = [
         filing for filing in filings if not db.filing_exists(conn, filing.accession_number)
     ]
-    if max_new_filings is not None:
-        new_filings = new_filings[:max_new_filings]
     logger.info("%s: %d filings found, %d new", ticker, len(filings), len(new_filings))
 
+    substantive_count = 0
     for filing in new_filings:
+        if max_new_filings is not None and substantive_count >= max_new_filings:
+            break
+
         document_text = fetch_filing_document(filing.primary_doc_url, sec_user_agent)
         risk_text = extract_risk_factors(document_text)
 
@@ -112,13 +125,18 @@ def ingest_company(
                 embedding,
             )
 
+        is_substantive = len(chunks) >= _SUBSTANTIVE_CHUNK_THRESHOLD
+        if is_substantive:
+            substantive_count += 1
+
         logger.info(
-            "%s: ingested %s filed %s (%s) as %d chunks",
+            "%s: ingested %s filed %s (%s) as %d chunks%s",
             ticker,
             filing.form_type,
             filing.filing_date,
             filing.accession_number,
             len(chunks),
+            "" if is_substantive else " (referral, doesn't count toward cap)",
         )
 
 
