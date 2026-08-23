@@ -114,7 +114,9 @@ def ingest_company(
             filing.filing_date,
             filing.primary_doc_url,
         )
-        for index, (chunk_text, embedding) in enumerate(zip(chunks, chunk_embeddings)):
+        for index, (chunk_text, embedding) in enumerate(
+            zip(chunks, chunk_embeddings, strict=True)
+        ):
             db.insert_filing_chunk(
                 conn,
                 filing_id,

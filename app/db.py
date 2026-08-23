@@ -9,9 +9,9 @@ indirection this project doesn't need.
 
 from __future__ import annotations
 
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from datetime import date
-from typing import Generator, Sequence
 
 import psycopg
 from pgvector.psycopg import register_vector

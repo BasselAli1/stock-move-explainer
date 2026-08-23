@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -78,8 +78,8 @@ def _fetch_ticker_map(
         and "title").
     """
     if cache_path.exists():
-        age = datetime.now(timezone.utc) - datetime.fromtimestamp(
-            cache_path.stat().st_mtime, tz=timezone.utc
+        age = datetime.now(UTC) - datetime.fromtimestamp(
+            cache_path.stat().st_mtime, tz=UTC
         )
         if age < max_age:
             return json.loads(cache_path.read_text(encoding="utf-8"))

@@ -35,7 +35,9 @@ def test_multiple_small_paragraphs_are_packed_together():
 def test_long_text_splits_into_multiple_chunks_within_size_limit():
     """Text well over the chunk size limit produces more than one chunk,
     each within the requested token budget."""
-    paragraphs = [f"This is risk paragraph number {i} with some detail. " * 5 for i in range(20)]
+    paragraphs = [
+        f"This is risk paragraph number {i} with some detail. " * 5 for i in range(20)
+    ]
     text = "\n\n".join(paragraphs)
     chunks = split_into_chunks(text, chunk_size_tokens=100, overlap_tokens=20)
     assert len(chunks) > 1
@@ -54,7 +56,9 @@ def test_consecutive_chunks_share_overlapping_text():
     encoded pieces), so token-ID equality on the *output* isn't a real
     contract of this function — the shared text is.
     """
-    paragraphs = [f"This is risk paragraph number {i} with some detail. " * 5 for i in range(20)]
+    paragraphs = [
+        f"This is risk paragraph number {i} with some detail. " * 5 for i in range(20)
+    ]
     text = "\n\n".join(paragraphs)
     chunks = split_into_chunks(text, chunk_size_tokens=100, overlap_tokens=20)
     assert len(chunks) >= 2
