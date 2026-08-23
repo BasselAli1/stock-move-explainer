@@ -151,15 +151,20 @@ def check_company(
     )
 
 
-def main() -> None:
-    """Run the trigger check for every company in the watchlist.
+def run_once() -> list[str]:
+    """Run the trigger check once for every company in the watchlist.
 
     Each company is processed independently: an error checking one company
-    is logged and the job moves on to the next, but the process exits
-    non-zero if any company failed, so a cron/scheduler failure hook can
-    surface it instead of it failing silently. A short pause is inserted
-    between companies' Alpha Vantage calls to stay under its 1
+    is logged and the job moves on to the next, rather than one bad company
+    aborting the whole run. Does not raise for a per-company failure and
+    does not exit the process — callers decide what a failure should mean
+    (a CLI run exits non-zero via `main`; a long-running scheduler just
+    logs and waits for tomorrow's run, see app/scheduler.py). A short pause
+    is inserted between companies' Alpha Vantage calls to stay under its 1
     request/second free-tier limit.
+
+    Returns:
+        Tickers whose check failed this run (empty if all succeeded).
     """
     settings = get_settings()
     tickers = load_watchlist()
@@ -178,9 +183,21 @@ def main() -> None:
 
     if failed_tickers:
         logger.error("Trigger check finished with failures: %s", failed_tickers)
-        sys.exit(1)
+    else:
+        logger.info(
+            "Trigger check finished successfully for all %d companies", len(tickers)
+        )
 
-    logger.info("Trigger check finished successfully for all %d companies", len(tickers))
+    return failed_tickers
+
+
+def main() -> None:
+    """CLI entrypoint: run the trigger check once, exiting non-zero on any
+    company failure so a cron/scheduler failure hook can surface it instead
+    of it failing silently.
+    """
+    if run_once():
+        sys.exit(1)
 
 
 if __name__ == "__main__":
