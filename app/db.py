@@ -67,6 +67,27 @@ def get_or_create_company(
         return cur.fetchone()[0]
 
 
+def get_company_by_ticker(conn: psycopg.Connection, ticker: str) -> dict | None:
+    """Look up an already-ingested company by ticker.
+
+    Used by the trigger job, which expects the ingestion job to have
+    already created the company row — unlike ingestion, the trigger job
+    doesn't create companies itself, since a company with no ingested
+    filings has nothing to search on a trigger.
+
+    Args:
+        conn: Open database connection.
+        ticker: Ticker symbol to look up.
+
+    Returns:
+        A dict with the company's `id` and `name`, or None if no company
+        with this ticker has been ingested yet.
+    """
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute("SELECT id, name FROM companies WHERE ticker = %s", (ticker,))
+        return cur.fetchone()
+
+
 def filing_exists(conn: psycopg.Connection, accession_number: str) -> bool:
     """Check whether a filing has already been ingested.
 
