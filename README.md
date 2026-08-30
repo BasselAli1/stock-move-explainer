@@ -1,5 +1,7 @@
 # Stock Move Explainer
 
+[![CI](https://github.com/BasselAli1/stock-move-explainer/actions/workflows/ci.yml/badge.svg)](https://github.com/BasselAli1/stock-move-explainer/actions/workflows/ci.yml)
+
 Watches a small list of public companies. When one's stock price drops more
 than a set threshold in a day, the app searches that company's own SEC
 filings for related risk language and emails a plain-language explanation
